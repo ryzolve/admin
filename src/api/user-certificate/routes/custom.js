@@ -11,5 +11,15 @@ module.exports = {
         middlewares: [],
       },
     },
+    {
+      // Manual trigger for certificate expiry check (use with external cron service)
+      method: 'POST',
+      path: '/user-certificates/check-expiring',
+      handler: 'user-certificate.checkExpiring',
+      config: {
+        policies: [],
+        middlewares: [],
+      },
+    },
   ],
 };

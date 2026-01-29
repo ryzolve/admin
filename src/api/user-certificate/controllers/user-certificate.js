@@ -112,6 +112,44 @@ module.exports = createCoreController('api::user-certificate.user-certificate', 
       certificates: results,
     };
   },
+
+  /**
+   * Manually trigger the certificate expiry check.
+   * POST /api/user-certificates/check-expiring
+   *
+   * Use this endpoint with an external cron service (like cron-job.org)
+   * if the hosting platform doesn't support Strapi's built-in cron.
+   *
+   * Optionally pass ?secret=YOUR_SECRET to add basic auth protection.
+   */
+  async checkExpiring(ctx) {
+    const { secret } = ctx.query;
+    const expectedSecret = process.env.CRON_SECRET;
+
+    // Basic auth check if CRON_SECRET is configured
+    if (expectedSecret && secret !== expectedSecret) {
+      ctx.response.status = 401;
+      return { error: 'Unauthorized. Provide ?secret=YOUR_CRON_SECRET' };
+    }
+
+    console.log('Manual trigger: Starting certificate expiry check...');
+
+    try {
+      await strapi
+        .service('api::user-certificate.user-certificate')
+        .checkExpiringCertificates();
+
+      return {
+        success: true,
+        message: 'Certificate expiry check completed. Check server logs for details.',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Error in manual certificate check:', error);
+      ctx.response.status = 500;
+      return { error: error.message };
+    }
+  },
 }));
 
 // --- Email template helpers (mirrors user-certificate service templates) ---
