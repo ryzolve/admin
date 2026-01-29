@@ -8,6 +8,79 @@ module.exports = ({ env }) => ({
   cron: {
     enabled: true,
     tasks: {
+      // TEST CRON - runs at 13:42 UTC to test email for pas@ryzolve.com
+      // REMOVE THIS AFTER TESTING
+      "42 13 * * *": async ({ strapi }) => {
+        console.log("[TEST CRON] Starting test email for pas@ryzolve.com...");
+
+        // Find user by email
+        const user = await strapi.db.query("plugin::users-permissions.user").findOne({
+          where: { email: "pas@ryzolve.com" },
+        });
+
+        if (!user) {
+          console.log("[TEST CRON] User pas@ryzolve.com not found!");
+          return;
+        }
+
+        // Find their expired certificate
+        const cert = await strapi.db.query("api::user-certificate.user-certificate").findOne({
+          where: { user: user.id, status: "expired" },
+          populate: ["user", "course"],
+        });
+
+        if (!cert) {
+          console.log("[TEST CRON] No expired certificate found for pas@ryzolve.com");
+          return;
+        }
+
+        console.log(`[TEST CRON] Found expired cert ID=${cert.id}, course=${cert.course?.title}, expiry=${cert.expiryDate}`);
+
+        try {
+          // Build the REAL expired email template (same as service)
+          const renewalUrl = `https://training.ryzolve.com/renewal?course=${cert.course?.id}`;
+          const courseName = cert.course?.title || "your course";
+          const userName = cert.user?.firstname || cert.user?.username || "Student";
+          const expiryDate = cert.expiryDate;
+
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://fhfqjcc.stripocdn.email/content/guids/CABINET_e4cafd70dfbf78cd99f9e36321d47993cd56fe9c5c3482d5a73b875e3956e04b/images/screenshot_20240417_at_164631removebgpreview.png" alt="Ryzolve" style="max-width: 150px;" />
+              </div>
+              <p style="font-size: 14px; color: #555;">Hi ${userName},</p>
+              <p style="font-size: 14px; color: #555;">Your <strong>${courseName}</strong> certificate expired on <strong>${expiryDate}</strong>.</p>
+              <p style="font-size: 14px; color: #555;">As a result, your access to the course has been removed and your certification is no longer active.</p>
+              <p style="font-size: 14px; color: #555; font-weight: bold;">To restore your certification:</p>
+              <ul style="font-size: 14px; color: #555; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Re-enroll in the course through Ryzolve</li>
+                <li style="margin-bottom: 8px;">Complete the training requirements</li>
+                <li style="margin-bottom: 8px;">Receive a new certificate valid for another year</li>
+              </ul>
+              <p style="font-size: 14px; color: #555;">We've kept your training history on file, so re-enrolling is quick and easy.</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${renewalUrl}" style="display: inline-block; padding: 15px 30px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Re-enroll now</a>
+              </div>
+              <p style="font-size: 14px; color: #555;">Questions? Contact us at <a href="mailto:pas@ryzolve.com" style="color: #FF774B;">pas@ryzolve.com</a>.</p>
+              <p style="font-size: 14px; color: #555;">Best regards,<br />The Ryzolve Team</p>
+              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <p style="font-size: 12px; color: #999;">© 2024 Ryzolve Inc. All rights reserved.</p>
+                <p style="font-size: 12px; color: #999;">9309 Highway 75 S Ste 102, New Waverly, TX 77358</p>
+              </div>
+            </div>
+          `;
+
+          await strapi.plugins["email"].services.email.send({
+            to: "pas@ryzolve.com",
+            subject: `Your ${courseName} certificate has expired`,
+            html: html,
+          });
+
+          console.log("[TEST CRON] Expired email sent successfully to pas@ryzolve.com using REAL template!");
+        } catch (error) {
+          console.error("[TEST CRON] Failed to send email:", error.message);
+        }
+      },
       // Debug cron - logs certificate counts including unnotified expired ones
       "*/5 * * * *": async ({ strapi }) => {
         const today = new Date();
