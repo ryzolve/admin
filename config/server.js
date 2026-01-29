@@ -8,6 +8,11 @@ module.exports = ({ env }) => ({
   cron: {
     enabled: true,
     tasks: {
+      // Test cron - runs every 5 minutes to verify cron is working
+      "*/5 * * * *": async ({ strapi }) => {
+        const now = new Date().toISOString();
+        console.log(`[CRON TEST] Ping at ${now} - Strapi cron is working!`);
+      },
       // Run daily at 9:15 AM Central (14:15 UTC / 15:15 UTC depending on DST)
       "15 14 * * *": async ({ strapi }) => {
         console.log("Starting daily user certificate expiry check...");
