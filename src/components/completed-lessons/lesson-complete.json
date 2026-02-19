@@ -15,6 +15,30 @@
     },
     "unitId": {
       "type": "string"
+    },
+    "entryType": {
+      "type": "enumeration",
+      "enum": ["lesson", "quiz_unit", "quiz_final"],
+      "default": "lesson"
+    },
+    "quizScore": {
+      "type": "integer"
+    },
+    "totalQuestions": {
+      "type": "integer"
+    },
+    "percentage": {
+      "type": "decimal"
+    },
+    "passed": {
+      "type": "boolean",
+      "default": false
+    },
+    "attemptedAt": {
+      "type": "datetime"
+    },
+    "courseTitle": {
+      "type": "string"
     }
   }
 }

@@ -43,6 +43,11 @@
     "totalQuestions": {
       "type": "integer"
     },
+    "quizType": {
+      "type": "enumeration",
+      "enum": ["unit", "final"],
+      "default": "unit"
+    },
     "isPassing": {
       "type": "boolean",
       "default": false

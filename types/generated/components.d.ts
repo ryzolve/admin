@@ -59,6 +59,14 @@ export interface CompletedLessonsLessonComplete extends Schema.Component {
     LessonTitle: Attribute.String;
     course_id: Attribute.String;
     unitId: Attribute.String;
+    entryType: Attribute.Enumeration<['lesson', 'quiz_unit', 'quiz_final']> &
+      Attribute.DefaultTo<'lesson'>;
+    quizScore: Attribute.Integer;
+    totalQuestions: Attribute.Integer;
+    percentage: Attribute.Decimal;
+    passed: Attribute.Boolean & Attribute.DefaultTo<false>;
+    attemptedAt: Attribute.DateTime;
+    courseTitle: Attribute.String;
   };
 }
 

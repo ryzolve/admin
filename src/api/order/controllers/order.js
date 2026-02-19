@@ -1,80 +1,99 @@
-"use strict";
-// @ts-ignore
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-// const stripe = require("stripe")(
-//   "pk_live_51IZKCmJZWHNdQWQL8OnhcYNkF2fmAxB3qzL4PmgxxvpJZWDEW6jFXHp8yCyv2QFOhBVQw0Xpjhql774TZde44qfm00JnGm23NB"
-// );
+'use strict';
 
-/**
- * order controller
- */
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createCoreController } = require('@strapi/strapi').factories;
 
-const { createCoreController } = require("@strapi/strapi").factories;
-
-module.exports = createCoreController("api::order.order", ({ strapi }) => ({
+module.exports = createCoreController('api::order.order', ({ strapi }) => ({
   async create(ctx) {
-    // @ts-ignore
+    const {
+      products = [],
+      username,
+      email,
+      discount = 0,
+      user: requestUser,
+    } = ctx.request.body || {};
 
-    // retrieve item information
-    const { products, username, email, discount, user } = ctx.request.body;
+    if (!Array.isArray(products) || products.length === 0) {
+      ctx.response.status = 400;
+      return { error: 'At least one product is required' };
+    }
+
     try {
+      const authenticatedUserId = ctx.state.user?.id;
+      let buyerUser = requestUser || null;
+
+      if (!buyerUser && authenticatedUserId) {
+        buyerUser = await strapi.db
+          .query('plugin::users-permissions.user')
+          .findOne({ where: { id: authenticatedUserId } });
+      }
+
+      if (!buyerUser?.id) {
+        ctx.response.status = 401;
+        return { error: 'Authenticated user is required to create an order' };
+      }
+
+      const numericDiscount = Number(discount) || 0;
       const randomNumber = Math.floor(100000 + Math.random() * 900000);
+
       const lineItems = products.map((product) => {
-        const totalAmount = product.price - (discount / 100) * product.price;
+        const basePrice = Number(product.price) || 0;
+        const discountedPrice = Math.max(
+          0,
+          basePrice - (numericDiscount / 100) * basePrice
+        );
 
         return {
           price_data: {
-            currency: "usd",
+            currency: 'usd',
             product_data: {
               name: product.title,
             },
-            unit_amount: Math.round(totalAmount * 100),
+            unit_amount: Math.round(discountedPrice * 100),
           },
           quantity: 1,
         };
       });
 
       const metadata = {
-        email: user.email,
-        agency: user.agency,
-        city: user.city,
-        randomNumber: randomNumber,
+        email: buyerUser.email || email || '',
+        agency: buyerUser.agency || '',
+        city: buyerUser.city || '',
+        randomNumber: String(randomNumber),
       };
 
-      // create a stripe session
       const session = await stripe.checkout.sessions.create({
-        customer_email: email,
-        mode: "payment",
+        customer_email: email || buyerUser.email,
+        mode: 'payment',
         success_url:
           process.env.CLIENT_URL +
-          `/purchase-completed?success='true'&username=${username}`,
-        cancel_url: process.env.CLIENT_URL + "/checkout",
+          `/purchase-completed?success='true'&username=${username || buyerUser.username || ''}`,
+        cancel_url: process.env.CLIENT_URL + '/checkout',
         line_items: lineItems,
-        metadata: metadata,
+        metadata,
         payment_intent_data: {
-          metadata: metadata,
+          metadata,
         },
       });
 
-      console.log({ session });
-
-      // create the item
-      await strapi.service("api::order.order").create({
+      await strapi.service('api::order.order').create({
         data: {
-          username,
+          username: username || buyerUser.username || '',
           products,
+          status: 'pending',
           stripeSessionToken: session.id,
           stripeRandomNumber: randomNumber,
           user: {
-            connect: [user.id],
+            connect: [buyerUser.id],
           },
         },
       });
 
       return { id: session.id };
     } catch (error) {
+      strapi.log.error('[Order] Failed to create checkout session:', error);
       ctx.response.status = 500;
-      return { error };
+      return { error: 'Unable to create checkout session' };
     }
   },
 }));

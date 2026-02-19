@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "support_tickets",
+  "info": {
+    "singularName": "support-ticket",
+    "pluralName": "support-tickets",
+    "displayName": "SupportTicket",
+    "description": "Help desk tickets from training module and website"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "fullname": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": ["general", "technical", "billing", "certificate", "other"],
+      "default": "general"
+    },
+    "message": {
+      "type": "text"
+    },
+    "source": {
+      "type": "enumeration",
+      "enum": ["training-module", "website"],
+      "default": "training-module"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["open", "in_progress", "closed"],
+      "default": "open"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

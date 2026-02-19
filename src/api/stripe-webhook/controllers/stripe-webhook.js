@@ -63,9 +63,15 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
 
       if (orderWithUser.user && orderWithUser.products) {
         for (const product of orderWithUser.products) {
+          const courseId = Number(product.id);
+          if (!Number.isInteger(courseId)) {
+            console.log(`Skipping non-course product for enrollment: ${product.id}`);
+            continue;
+          }
+
           try {
             await strapi.db.query("api::course.course").update({
-              where: { id: product.id },
+              where: { id: courseId },
               data: {
                 users: {
                   connect: [orderWithUser.user.id],
@@ -73,11 +79,11 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
               },
             });
             console.log(
-              `User ${orderWithUser.user.id} enrolled in course ${product.id}`
+              `User ${orderWithUser.user.id} enrolled in course ${courseId}`
             );
           } catch (enrollError) {
             console.error(
-              `Error enrolling user in course ${product.id}:`,
+              `Error enrolling user in course ${courseId}:`,
               enrollError
             );
           }
@@ -95,7 +101,7 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
       );
       const products = lineItems.data.map((item) => ({
         name: item.description,
-        amount: item.amount_total.toFixed(2), // Convert from cents to dollars
+        amount: (item.amount_total / 100).toFixed(2),
       }));
 
       console.log(`Order ${order.id} status updated to paid`);
@@ -173,9 +179,7 @@ async function sendEmail(to, subject, message, products, agency, city) {
             <td style="padding: 10px; border: 1px solid #ddd;">${
               product.name
             }</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">$${(
-              product.amount / 100
-            ).toFixed(2)}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">$${Number(product.amount).toFixed(2)}</td>
           </tr>`
       )
       .join("");

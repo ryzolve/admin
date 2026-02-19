@@ -8,6 +8,7 @@
 module.exports = {
   async afterCreate(event) {
     const { result } = event;
+    const quizType = result.quizType || "unit";
 
     // Skip if no user or course relation
     if (!result.user || !result.course) {
@@ -44,6 +45,14 @@ module.exports = {
       where: { id: result.id },
       data: { isPassing: true },
     });
+
+    // Certificate issuance is restricted to final quizzes only.
+    if (quizType !== "final") {
+      console.log(
+        `Quiz score ${result.id} marked as passing, but quizType=${quizType}; certificate not issued`
+      );
+      return;
+    }
 
     // Get user and course IDs
     const userId = typeof result.user === "object" ? result.user.id : result.user;

@@ -768,8 +768,8 @@ export interface ApiCertificateCertificate extends Schema.CollectionType {
   info: {
     singularName: 'certificate';
     pluralName: 'certificates';
-    displayName: 'certificate';
-    description: '';
+    displayName: 'Certificate';
+    description: 'Certificate template for course completion';
   };
   options: {
     draftAndPublish: true;
@@ -1221,6 +1221,7 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     >;
     status: Attribute.String;
     stripeRandomNumber: Attribute.BigInteger;
+    remindersSent: Attribute.JSON & Attribute.DefaultTo<[]>;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1284,7 +1285,7 @@ export interface ApiQuizScoreQuizScore extends Schema.CollectionType {
     singularName: 'quiz-score';
     pluralName: 'quiz-scores';
     displayName: 'QuizScore';
-    description: '';
+    description: 'Tracks quiz scores and triggers certificate issuance';
   };
   options: {
     draftAndPublish: true;
@@ -1296,6 +1297,20 @@ export interface ApiQuizScoreQuizScore extends Schema.CollectionType {
     email: Attribute.String;
     firstname: Attribute.String;
     lastname: Attribute.String;
+    user: Attribute.Relation<
+      'api::quiz-score.quiz-score',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    course: Attribute.Relation<
+      'api::quiz-score.quiz-score',
+      'manyToOne',
+      'api::course.course'
+    >;
+    totalQuestions: Attribute.Integer;
+    quizType: Attribute.Enumeration<['unit', 'final']> &
+      Attribute.DefaultTo<'unit'>;
+    isPassing: Attribute.Boolean & Attribute.DefaultTo<false>;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1485,6 +1500,53 @@ export interface ApiSocialMediaLinkSocialMediaLink
   };
 }
 
+export interface ApiSupportTicketSupportTicket extends Schema.CollectionType {
+  collectionName: 'support_tickets';
+  info: {
+    singularName: 'support-ticket';
+    pluralName: 'support-tickets';
+    displayName: 'SupportTicket';
+    description: 'Help desk tickets from training module and website';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    fullname: Attribute.String;
+    email: Attribute.Email;
+    subject: Attribute.String;
+    category: Attribute.Enumeration<
+      ['general', 'technical', 'billing', 'certificate', 'other']
+    > &
+      Attribute.DefaultTo<'general'>;
+    message: Attribute.Text;
+    source: Attribute.Enumeration<['training-module', 'website']> &
+      Attribute.DefaultTo<'training-module'>;
+    status: Attribute.Enumeration<['open', 'in_progress', 'closed']> &
+      Attribute.DefaultTo<'open'>;
+    user: Attribute.Relation<
+      'api::support-ticket.support-ticket',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::support-ticket.support-ticket',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::support-ticket.support-ticket',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiTestimonialTestimonial extends Schema.SingleType {
   collectionName: 'testimonials';
   info: {
@@ -1616,6 +1678,57 @@ export interface ApiUnitUnit extends Schema.CollectionType {
   };
 }
 
+export interface ApiUserCertificateUserCertificate
+  extends Schema.CollectionType {
+  collectionName: 'user_certificates';
+  info: {
+    singularName: 'user-certificate';
+    pluralName: 'user-certificates';
+    displayName: 'UserCertificate';
+    description: 'Individual user certificates with expiry tracking';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    user: Attribute.Relation<
+      'api::user-certificate.user-certificate',
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    course: Attribute.Relation<
+      'api::user-certificate.user-certificate',
+      'manyToOne',
+      'api::course.course'
+    >;
+    quizScore: Attribute.Relation<
+      'api::user-certificate.user-certificate',
+      'oneToOne',
+      'api::quiz-score.quiz-score'
+    >;
+    issuedDate: Attribute.Date & Attribute.Required;
+    expiryDate: Attribute.Date & Attribute.Required;
+    status: Attribute.Enumeration<['active', 'expiring_soon', 'expired']> &
+      Attribute.DefaultTo<'active'>;
+    notificationsSent: Attribute.JSON & Attribute.DefaultTo<[]>;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::user-certificate.user-certificate',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::user-certificate.user-certificate',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 declare module '@strapi/types' {
   export module Shared {
     export interface ContentTypes {
@@ -1654,10 +1767,12 @@ declare module '@strapi/types' {
       'api::ryzolve-contact.ryzolve-contact': ApiRyzolveContactRyzolveContact;
       'api::service.service': ApiServiceService;
       'api::social-media-link.social-media-link': ApiSocialMediaLinkSocialMediaLink;
+      'api::support-ticket.support-ticket': ApiSupportTicketSupportTicket;
       'api::testimonial.testimonial': ApiTestimonialTestimonial;
       'api::training-about-us.training-about-us': ApiTrainingAboutUsTrainingAboutUs;
       'api::training-hero.training-hero': ApiTrainingHeroTrainingHero;
       'api::unit.unit': ApiUnitUnit;
+      'api::user-certificate.user-certificate': ApiUserCertificateUserCertificate;
     }
   }
 }
