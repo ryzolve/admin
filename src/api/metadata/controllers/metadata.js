@@ -15,7 +15,6 @@ module.exports = createCoreController(
   ({ strapi }) => ({
     async find(ctx) {
       const user = ctx.state.user;
-      console.log(ctx);
       if (!user) {
         return ctx.unauthorized("You must be logged in to access this data.");
       }
