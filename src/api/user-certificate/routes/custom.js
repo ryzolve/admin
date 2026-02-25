@@ -21,5 +21,14 @@ module.exports = {
         middlewares: [],
       },
     },
+    {
+      // Public route to verify certificate authenticity
+      method: 'GET',
+      path: '/user-certificates/verify/:id',
+      handler: 'user-certificate.verify',
+      config: {
+        auth: false,
+      },
+    },
   ],
 };

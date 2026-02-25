@@ -182,6 +182,41 @@ module.exports = createCoreController('api::user-certificate.user-certificate', 
 
     return results;
   },
+
+  /**
+   * Public route to verify a certificate's authenticity.
+   * GET /api/user-certificates/verify/:id
+   */
+  async verify(ctx) {
+    const { id } = ctx.params;
+    
+    const certificate = await strapi.db.query('api::user-certificate.user-certificate').findOne({
+      where: { id },
+      populate: ['user', 'course', 'quizScore'],
+    });
+
+    if (!certificate) {
+      ctx.response.status = 404;
+      return { error: 'Certificate not found' };
+    }
+
+    // Return only public/verification-safe data
+    return {
+      success: true,
+      data: {
+        id: certificate.id,
+        attributes: {
+          issuedDate: certificate.issuedDate,
+          expiryDate: certificate.expiryDate,
+          status: certificate.status,
+          courseTitle: certificate.course?.title || 'Unknown Course',
+          firstname: certificate.quizScore?.firstname || certificate.user?.firstname || '',
+          lastname: certificate.quizScore?.lastname || certificate.user?.lastname || '',
+          username: certificate.quizScore?.username || certificate.user?.username || 'Student',
+        }
+      }
+    };
+  },
 }));
 
 // --- Email template helpers (mirrors user-certificate service templates) ---
