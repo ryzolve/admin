@@ -124,7 +124,7 @@ module.exports = {
             issuedDate: issuedDate,
             expiryDate: expiryDateString,
             status: "active",
-            notificationsSent: [],
+            notificationsSent: ["certificate-issued"],
             publishedAt: new Date(),
           },
         });
