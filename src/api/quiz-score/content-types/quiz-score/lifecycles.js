@@ -7,11 +7,27 @@
 
 module.exports = {
   async afterCreate(event) {
-    const { result } = event;
+    const { result, params } = event;
     const quizType = result.quizType || "unit";
 
+    // Extract user/course IDs from result or from the input params (Strapi 4
+    // lifecycle results don't always include populated relations)
+    const extractId = (val) => {
+      if (!val) return null;
+      if (typeof val === "number" || typeof val === "string") return val;
+      if (typeof val === "object" && val.id) return val.id;
+      if (typeof val === "object" && val.connect) {
+        const first = Array.isArray(val.connect) ? val.connect[0] : val.connect;
+        return first?.id || first || null;
+      }
+      return null;
+    };
+
+    const userId = extractId(result.user) || extractId(params?.data?.user);
+    const courseId = extractId(result.course) || extractId(params?.data?.course);
+
     // Skip if no user or course relation
-    if (!result.user || !result.course) {
+    if (!userId || !courseId) {
       console.log("Quiz score created without user or course relation, skipping certificate check");
       return;
     }
@@ -53,10 +69,6 @@ module.exports = {
       );
       return;
     }
-
-    // Get user and course IDs
-    const userId = typeof result.user === "object" ? result.user.id : result.user;
-    const courseId = typeof result.course === "object" ? result.course.id : result.course;
 
     // Check if user certificate already exists for this user and course
     const existingUserCertificate = await strapi.db
